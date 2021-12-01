@@ -98,12 +98,14 @@ class Column:
         url_factory=None,
         url_key=None,
         url_new_window=False,
+        row_url_label=None,
         max_length=None,
         is_numeric=False,
         char_width=None,
         represents=False,
         primary_key=False,
         hidden=False,
+        skip_write=False,
         widget_factory=None,
         widget_kwargs=None,
         background_attr=None,
@@ -120,6 +122,7 @@ class Column:
         self.represents = bool(represents)
         self.primary_key = bool(primary_key)
         self.hidden = bool(hidden)
+        self.skip_write = bool(skip_write)
         self.editable = editable
         self.max_length = max_length
         self.widget_factory = widget_factory
@@ -151,6 +154,7 @@ class Column:
         self.url_factory = url_factory
         self.url_key = url_key
         self.url_new_window = url_new_window
+        self.row_url_label = row_url_label
         self.background_attr = background_attr
         self.foreground_attr = foreground_attr
 

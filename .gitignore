@@ -1,4 +1,6 @@
 venv
 
+# python build things
 __pycache__
 *.egg-info
+build
