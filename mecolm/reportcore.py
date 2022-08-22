@@ -290,10 +290,20 @@ def parse_bool(v):
         return False
     raise ValueError(f"unacceptable bool import:  {v}")
 
+def parse_binary(v):
+    if v is None:
+        return v
+    if isinstance(v, dict) and "base64" in v:
+        return base64.b64decode(v["base64"].encode("ascii"))
+    if isinstance(v, str):
+        return base64.b64decode(v.encode("ascii"))
+    raise NotImplementedError(f"Binary data interpretation of {type(v)} is unknown")
+
+
 
 def as_python(columns, to_localtime=True):
-    def coerce(converters, _tuple):
-        return tuple(t(v) for t, v in zip(converters, _tuple))
+    def row_coerce(converters, _data):
+        return tuple(func(_data[key]) for key, func in converters)
 
     identity = lambda v: v
 
@@ -305,7 +315,7 @@ def as_python(columns, to_localtime=True):
         elif meta["type"] == "boolean":
             return lambda v: False if v == None else v
         elif meta["type"] == "binary":
-            return lambda v: None if v == None else base64.b64decode(v.encode("ascii"))
+            return parse_binary
         elif meta["type"] == "date":
             return lambda v: parse_date(v) if v != None else None
         elif meta["type"] == "datetime":
@@ -326,13 +336,13 @@ def as_python(columns, to_localtime=True):
         else:
             return identity
 
-    converters = [column_converter(*x) for x in columns]
-    return functools.partial(coerce, converters)
+    converters = [(x[0], column_converter(*x)) for x in columns]
+    return functools.partial(row_coerce, converters)
 
 
 def as_client(columns, to_localtime=True):
-    def coerce(converters, _tuple):
-        return tuple(t(v) for t, v in zip(converters, _tuple))
+    def row_coerce(converters, _data):
+        return tuple(func(_data[key]) for key, func in converters)
 
     identity = lambda v: v
 
@@ -356,5 +366,5 @@ def as_client(columns, to_localtime=True):
         else:
             return identity
 
-    converters = [column_converter(*x) for x in columns]
-    return functools.partial(coerce, converters)
+    converters = [(x[0], column_converter(*x)) for x in columns]
+    return functools.partial(row_coerce, converters)

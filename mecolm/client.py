@@ -21,11 +21,33 @@ class ClientTable:
         self.rows = [f(x) for x in rows]
 
         # initialize pkey for deletion
+        pkey = [
+            col[0]
+            for col in columns
+            if col[1] != None and col[1].get("primary_key", False)
+        ]
+        self.pkey = pkey
+
         self.columns = reportcore.parse_columns(columns)
         self.columns_full = reportcore.parse_columns_full(columns)
         self.DataRow.model_columns = {c.attr: c for c in self.columns}
 
         self.deleted_rows = []
+
+    def duplicate(self, rows, deleted="duplicate"):
+        # TODO:  make sure that deleted rows don't show up here as rows to save
+        x = self.__class__.__new__(self.__class__)
+        x.DataRow = self.DataRow
+        x.rows = rows[:]
+        x.columns = self.columns
+        x.columns_full = self.columns_full
+        x.pkey = self.pkey
+        if deleted == "duplicate":
+            x.deleted_rows = list(self.deleted_rows)
+        else:
+            raise NotImplementedError("this value of deleted not handled")
+        return x
+
 
     def converter(self, row_field_list):
         return reportcore.as_python(row_field_list, to_localtime=self.to_localtime)
@@ -86,7 +108,7 @@ class ClientTable:
             and getter == None
         ):
             attrs = self.DataRow.__slots__
-            slimrows = [r._as_tuple() for r in self.rows]
+            slimrows = [r._as_dict() for r in self.rows]
         else:
             if inclusions != None:
                 attrs = list(inclusions)
@@ -100,7 +122,7 @@ class ClientTable:
             getter = getter if getter != None else getattr
             slimrows = []
             for r in self.rows:
-                slim = [getter(r, a) for a in attrs]
+                slim = {a: getter(r, a) for a in attrs}
                 slimrows.append(slim)
 
         keys = {}
@@ -111,7 +133,7 @@ class ClientTable:
                 )
             pfunc = lambda row: [getattr(row, p1) for p1 in self.pkey]
             keys["deleted"] = [pfunc(row) for row in self.deleted_rows]
-        return (keys, attrs, slimrows)
+        return {**keys, "columns": attrs, "data": slimrows}
 
     def as_http_post_file(self, *args, **kwargs):
         tab3 = self.as_writable(*args, **kwargs)
